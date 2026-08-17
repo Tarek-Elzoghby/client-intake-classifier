@@ -1,0 +1,24 @@
+PROJECT: AI-Powered Client Intake Classifier
+
+What you'll build: Extend an Automation Agency Intake Router with an AI classification step. 
+When a client submits an intake form, an LLM reads their project description and classifies it into one of three categories 
+- simple automation 
+- AI workflow
+- custom integration
+routing each differently: 
+- different confirmation email copy 
+- different internal notification 
+- Google Sheets column logging the AI-assigned category.
+
+Requirements:
+
+Form Trigger collects a free-text "project description" field
+LLM node classifies it into one of three predefined categories
+Classification result is written to a dedicated Google Sheets column
+Confirmation email to the client references their category naturally
+Internal notification email includes the AI-assigned category
+The workflow handles uncertain/unrecognized classification gracefully (fallback or flag — not a broken workflow)
+
+What "done" looks like: Submit three test forms with meaningfully different project descriptions. 
+Each is classified correctly (or falls back gracefully), logged to Sheets with the right category, and triggers the correct email variant — 
+all three paths working end-to-end.

@@ -1,0 +1,1089 @@
+{
+  "name": "AI-Powered Client Intake Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Intake form",
+        "formDescription": "Write your name, email, and what task you need it to be done, and will reach out to you as soon as possible.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name"
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "description"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -944,
+        -384
+      ],
+      "id": "44abd8ed-2c04-40d2-abc0-83dd61efea1a",
+      "name": "Intake Form Submission",
+      "webhookId": "cfca6e79-ed27-41ea-8fa0-4a5d2f192f46"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[FRAMING]\nYou are an assistant for an automation agency. You will receive a client's \nproject description from an intake form. Your job is to assign exactly one \ncategory from a fixed list to each submission.\n\n[DEFINITIONS]\n- simple_automation: One or more actions fire in a fixed, uniform way off a \n  single trigger. Data passes through as-is — mapping fields into a \n  destination's format (e.g. form field -> sheet column) does not count as \n  transformation. No conditional branching (no \"if X then Y, else Z\"), no \n  computed or derived values, and no AI/LLM reasoning involved. The number \n  of destinations touched does not matter — what matters is that each one \n  just receives the same unchanged data every time.\n\n- ai_workflow: The deliverable itself requires AI/LLM reasoning, generation, \n  or classification to function — e.g. summarizing, drafting content, \n  classifying inputs, or making a judgment call that a human would \n  otherwise have to make.\n\n- custom_integration: Involves conditional/branching logic (different \n  outcomes depending on the data), data transformation or computation \n  (merging, calculating, or reshaping data beyond simple field-mapping), or \n  multi-step orchestration where one system's output determines what \n  happens next — driven by fixed rules, not AI reasoning.\n\n- ambiguous: The description plausibly fits more than one of the above \n  categories, and the input itself does not contain enough detail to \n  determine which one the client actually means.\n\n- invalid: Inputs that cannot be categorized due to gibberish, out-of-scope \n  content, or missing critical information.\n  When assigning invalid, also determine has_partial_intent: true only if \n  the text shows a genuine, identifiable attempt to describe a real \n  project that's simply missing critical detail (e.g. \"I need something \n  to help my business\" — real intent, too vague to act on). False if \n  invalid due to gibberish or clearly out-of-scope content. For every \n  other category, has_partial_intent is always false.\n\n[EVALUATION METHOD]\nDo not decide sequentially. Instead:\n\n1. First, check if this is a valid project description at all. If not -> \n   invalid. Stop here.\n\n2. Independently assess whether the description plausibly fits EACH of the \n   three real categories (simple_automation, ai_workflow, \n   custom_integration) — grounded strictly in what the client's wording \n   actually says, not in what an engineer could choose to build if given \n   the task. Almost any request could technically be over-engineered with \n   AI or branching logic; that possibility is not evidence the client \n   wants it, and must not be counted as a plausible fit.\n\n   Only count a category as plausible if the text contains a specific \n   signal for it:\n   - ai_workflow is plausible only if the wording implies interpretation, \n     judgment, generation, summarization, or classification of content \n     (e.g. \"figure out,\" \"smartly decide,\" \"write a reply,\" \"understand \n     what they meant\"). Words that simply describe automation itself — \n     \"automatically,\" \"automated,\" \"without me doing it manually\" — are \n     NOT signals for ai_workflow; they are the plain-language description \n     of simple_automation and must not be treated as implying AI.\n   - custom_integration is plausible only if the text mentions or clearly \n     implies multiple conditions, branches, recipients, or systems whose \n     handling would differ based on the data (e.g. \"route to the right \n     person,\" \"depending on the order size\"). A single undifferentiated \n     action (e.g. \"notify me,\" with no mention of who else, or which \n     conditions) is not enough to make custom_integration plausible.\n   - simple_automation is plausible whenever the description is a \n     single fixed trigger -> action (or trigger -> multiple \n     unconditional actions) with no textual signal pointing to the \n     other two.\n\n   If you find yourself justifying a category with \"could imply\" or \n   \"might involve\" without pointing to a specific word or phrase that \n   drove that reading, do not count it — that is a possibility you are \n   supplying, not one the client expressed.\n\n3. Count how many categories plausibly fit:\n   - Exactly one fits -> assign that category.\n   - Two or more fit, and the description does not specify enough to \n     pick between them -> assign 'ambiguous'. This is the correct outcome, \n     not a fallback to avoid — do not force a single category just because \n     one reading feels more likely or more common in practice. \"More \n     common in practice\" is a guess about unstated intent, which is exactly \n     what ambiguous exists to catch.\n   - Two or more fit, but the description contains a specific detail that \n     clearly rules the others out -> assign the one that remains.\n\n[REASONING FORMAT]\nBefore giving the final category, briefly state which categories you \nconsidered plausible and why, citing the specific words or phrases that \ngrounded each plausible reading. If more than one was plausible, explain \nwhat specific missing information would have let you pick between them — \nthis is what should push you to 'ambiguous' rather than guessing.\n\n[INPUT]\nClient's project description:\n{{ $json.description }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -784,
+        -384
+      ],
+      "id": "f2bf417b-7a66-4b2d-a96f-d97133bc618c",
+      "name": "Project Description",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -784,
+        -256
+      ],
+      "id": "c9f44d5e-1dba-4e30-8821-524f3e6e6fd1",
+      "name": "Classification Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "k31nFw84Qzpe9sfp",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"reasoning\": { \"type\": \"string\" },\n    \"category\": {\n      \"type\": \"string\",\n      \"enum\": [\"simple_automation\", \"ai_workflow\", \"custom_integration\", \"ambiguous\", \"invalid\"]\n    },\n    \"has_partial_intent\": { \"type\": \"boolean\" }\n  },\n  \"required\": [\"reasoning\", \"category\", \"has_partial_intent\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -640,
+        -256
+      ],
+      "id": "65ca55ac-47a7-4be0-8440-195b829a23e3",
+      "name": "Category + Reasoning Schema"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "478466ad-9872-4d5f-8fd0-d2e065e16d13",
+              "name": "Name",
+              "value": "={{ $('Intake Form Submission').item.json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "03a15e4e-91a1-44cd-bca9-3cf926e46e49",
+              "name": "Email",
+              "value": "={{ $('Intake Form Submission').item.json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "365ba82d-d1b7-400b-b367-1f51714e0b6d",
+              "name": "description",
+              "value": "={{ $('Intake Form Submission').item.json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "0a4373a0-ac49-4a24-87dc-395e127ea1f8",
+              "name": "category",
+              "value": "={{ $json.output.category }}",
+              "type": "string"
+            },
+            {
+              "id": "005b15b3-fd1c-4826-ba60-2ce53ac668b1",
+              "name": "reasoning",
+              "value": "={{ $json.output.reasoning }}",
+              "type": "string"
+            },
+            {
+              "id": "fe36bc88-24dc-4852-b59a-53fc195bf1a1",
+              "name": "output.has_partial_intent",
+              "value": "={{ $json.output.has_partial_intent }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -432,
+        -400
+      ],
+      "id": "e63b7e39-ec1b-4ae6-ab9e-82a595d05c26",
+      "name": "Attach Classification to Submission"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c0987fad-c5e4-4481-8c53-f01c5a3c7549",
+              "name": "Name",
+              "value": "={{ $json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "e0de145a-a9d0-421f-88e0-9fb16c7e9064",
+              "name": "Email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "8f8593ca-267c-4ae6-ad52-6011792198fb",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "78d34ea3-5e97-464c-94ad-656b0ff9ac5f",
+              "name": "category",
+              "value": "system_error",
+              "type": "string"
+            },
+            {
+              "id": "adb4bb47-c43e-4b4c-848f-8f2cb4ba2818",
+              "name": "reasoning",
+              "value": "Classification failed after 3 retries",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -432,
+        -256
+      ],
+      "id": "61a97400-2c43-4875-b3e5-614eb7ee5f6f",
+      "name": "Handle: Classification Failure"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "simple_automation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c6b9a595-1ea4-42ac-8a4d-31717484d200"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "={{ true }}",
+              "outputKey": "Simple Automation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6c80abc9-7c9a-47d8-8711-d91c467dc116",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "ai_workflow",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ai_workflow"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ec81c29a-c71f-4ce2-a199-c43be5dd6589",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "custom_integration",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "custom_integration"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "87a03fb4-d25a-44bc-b0c7-3c9b87124cb2",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "system_error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "System Error — Needs Review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d69c7c2e-a138-4863-9af2-ed4bb795491f",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "ambiguous",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ambiguous — Needs Review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "81c0ea15-7053-4ecb-ae27-16fe4a962489",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "=invalid",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "invalid"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        -384
+      ],
+      "id": "72c9d1a4-385e-471f-9178-876e136c759e",
+      "name": "Route: By Classification Category"
+    },
+    {
+      "parameters": {
+        "sendTo": "t43885677@gmail.com",
+        "subject": "📥 New Lead — Simple Automation",
+        "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: simple_automation  \nDescription: {{ $json.description }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -848
+      ],
+      "id": "38f0e3ce-4361-4b6b-a25b-8f30cb930c14",
+      "name": "Email: Internal — Simple Automation",
+      "webhookId": "7d6b1e1a-8b35-46d5-999f-2687f6ed7c7d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Route: By Classification Category').item.json.Email }}",
+        "subject": "=Got Your Request — {{ $('Route: By Classification Category').item.json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Route: By Classification Category').item.json.Name }},  \nThanks for reaching out! Your request looks like a great fit for a simple automation — the kind of task that connects the tools you're already using so things happen automatically, without you lifting a finger.  \nGood news: these are usually quick to scope and build compared to larger projects, so you can expect a fast turnaround.  \nHere's what happens next: \n1. We'll review the details you shared and confirm the exact trigger and action involved. \n2. We'll send over a quick summary and, if needed, ask 1-2 clarifying questions. \n3. Once confirmed, we'll get started — most automations like this are up and running within a short timeframe.  \nTalk soon, \nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        -848
+      ],
+      "id": "a4717727-b9c5-4128-89c9-e21004be07dc",
+      "name": "Email: Client — Simple Automation",
+      "webhookId": "ec9facb5-b9dd-42d8-bbd8-fe7374784162",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=t43885677@gmail.com",
+        "subject": "={{ $json.category === \"system_error\" ? \"[Action Needed] Classification Error\" : \"[Action Needed] Ambiguous Intake\" }} — {{ $json.Name }}",
+        "emailType": "text",
+        "message": "=A new client submission needs manual attention.  Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nFlagged as: {{ $json.category }} \nReason: {{ $json.reasoning }}  \nOriginal message: \"{{ $json.description }}\" \n{{ $json.category === \"system_error\" ? \"This one failed automatic classification after multiple retries.\" : \"This one didn't clearly fit a single category and needs a human call.\"\n}}  \nPlease review and route manually.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        -288
+      ],
+      "id": "0e679684-7858-4775-bb4e-47b2951175b2",
+      "name": "Email: Internal — Ambiguous/System Error",
+      "webhookId": "db560e6a-bb59-4159-83fe-65a138efe3d0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "758f09f5-f0c2-4ec4-8826-dbe03afd007d",
+              "name": "Name",
+              "value": "={{ $('Route: By Classification Category').item.json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "79339b45-d735-440b-943a-4be7b61961cd",
+              "name": "Email",
+              "value": "={{ $('Route: By Classification Category').item.json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "012fef27-285e-4f77-b810-9ddb6ab2c38a",
+              "name": "description",
+              "value": "={{ $('Route: By Classification Category').item.json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "ad38026c-5a34-4150-a1b3-f6a52bb1b58b",
+              "name": "category",
+              "value": "={{ $('Route: By Classification Category').item.json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "c95663c3-2ac6-444d-97d0-1f617d304f19",
+              "name": "reasoning",
+              "value": "={{ $('Route: By Classification Category').item.json.reasoning }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        208,
+        -288
+      ],
+      "id": "1566e1ea-1196-45df-b508-6cbe18a94739",
+      "name": "Merge: Rebuild After Notification — Ambiguous/System Error"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7e55cd64-83d5-4ca3-a0ff-4b5b266738ba",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "=system_error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        352,
+        -288
+      ],
+      "id": "361547eb-944f-4501-8609-e0264e284d13",
+      "name": "Check: Is System Error?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=We've Received Your Submission — {{ $json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.Name }},\n\nThank you for reaching out! We've received your message and it's currently under review by our team.\n\nIn some cases, we may need a bit more detail to make sure we route your request to the right person and give you an accurate response. If that's the case, we'll follow up with a few quick questions shortly.\n\nOtherwise, expect to hear back from us soon with next steps.\n\nThanks for your patience,\nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -352
+      ],
+      "id": "b83fc880-ffdd-447a-9a0c-5ef3235362dc",
+      "name": "Email: Client — System Error",
+      "webhookId": "d252e7f3-26f1-4278-ada7-123866e2e3b0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=We've Received Your Submission — {{ $json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.Name }},   \nThanks for getting in touch! \nWe've received your message and our team is reviewing the details now.  \nWe'll be in touch soon to follow up and discuss next steps.   \nTalk soon,  \nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -208
+      ],
+      "id": "0cf930d8-8df0-470b-aa00-93f94a792b04",
+      "name": "Email: Client — Ambiguous",
+      "webhookId": "11714330-3a63-4b38-ade4-a6e90d3999c1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=t43885677@gmail.com",
+        "subject": "📥 New Lead — AI Workflow",
+        "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: ai_workflow  \nDescription: {{ $json.description }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -656
+      ],
+      "id": "0c7eef27-8587-48bf-9f8f-94075742ece5",
+      "name": "Email: Internal — AI Workflow",
+      "webhookId": "6e6ce4c4-3811-459a-9242-5ae096e0da0c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Route: By Classification Category').item.json.Email }}",
+        "subject": "=Got Your Request — {{ $('Route: By Classification Category').item.json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Route: By Classification Category').item.json.Name }} ,  \nThanks for reaching out! Your request involves building something a bit  more specialized — a workflow where part of the job requires AI to  understand, generate, or make a judgment call, not just move data from  one place to another.  \nBecause of that, we like to get this right rather than rush it. \nHere's  what that usually looks like:  \n1. We'll start with a short scoping conversation to nail down exactly what \"done well\" looks like for your use case — including a few real examples, if you have them. \n2. We'll build a first version and share it with you to review. \n3. We'll refine based on your feedback before it goes live.  \nThis tends to take a bit longer than a straightforward automation, since  getting the AI's judgment right is the actual work — but the result is  built to handle real-world cases, not just the happy path.  \nWe'll follow up shortly to kick off scoping.  \nTalk soon, \nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        -656
+      ],
+      "id": "616777da-36e4-4319-b5d5-f8ea9d0f2724",
+      "name": "Email: Client — AI Workflow",
+      "webhookId": "9de4a6d7-6ef0-4cfe-bf5f-67adead0fc49",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "t43885677@gmail.com",
+        "subject": "📥 New Lead — Custom Integration",
+        "emailType": "text",
+        "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: custom_integration  \nDescription: {{ $json.description }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -464
+      ],
+      "id": "d92d562b-121c-4fb3-9d86-fe8072307583",
+      "name": "Email: Internal — Custom Integration",
+      "webhookId": "34918534-a01f-4205-a9bb-858045cbac8b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Route: By Classification Category').item.json.Email }}",
+        "subject": "=Got Your Request — {{ $('Route: By Classification Category').item.json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Route: By Classification Category').item.json.Name }},  \nThanks for reaching out! \nYour request involves connecting multiple systems  together with some specific logic behind how data moves between them —  not just a straight pass-through, but rules about what happens in  different situations.  \nBecause there are more moving parts here, we like to be thorough:  \n1. We'll map out the systems involved and the different conditions or outcomes your workflow needs to handle. \n2. We'll build it step by step, testing each connection as we go. \n3. We'll walk through the edge cases with you before considering it done, so nothing slips through once it's live.  \nThis kind of project usually takes a bit more time than a simple  automation, since the goal is making sure every path through the logic  holds up — not just the most common one. \nWe'll follow up shortly with a few questions to map things out.  \nTalk soon, \nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        -464
+      ],
+      "id": "6a6f289d-e42d-444d-8bca-98a2e5a5a978",
+      "name": "Email: Client — Custom Integration",
+      "webhookId": "1fcb6444-0362-4af9-a05c-95fe124751aa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bfb4de15-0f36-41a0-a6ad-7e4b982cc796",
+              "leftValue": "={{ $json.output.has_partial_intent }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "c47f9649-7ae8-4a49-9aa4-563997e3d21f",
+      "name": "Check: Has Partial Intent?"
+    },
+    {
+      "parameters": {
+        "sendTo": "t43885677@gmail.com",
+        "subject": "📝 Partial Lead — Awaiting More Detail",
+        "emailType": "text",
+        "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: invalid (partial intent — missing detail) \nReason: {{ $json.reasoning }}  \nSubmission: {{ $json.description }}  \nThis looks like a real project but is missing key details. \nWe've asked  the client for more info — keep an eye out for their reply and follow  up once it comes in.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        -32
+      ],
+      "id": "7a09655b-8382-4ceb-a4a8-139367621bde",
+      "name": "Email: Internal — Invalid (Partial Intent)",
+      "webhookId": "3e235b57-4cc0-4f4b-bcb1-0196018417df",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Check: Has Partial Intent?').item.json.Email }}",
+        "subject": "=We've Received Your Submission — {{ $('Check: Has Partial Intent?').item.json.Name }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Check: Has Partial Intent?').item.json.Name }},  \nThanks for reaching out! \nWe can see you're looking for help with something, but we'd love a bit more detail to understand exactly what  you need.  \nCould you reply with a bit more about what you're trying to accomplish?  \nOnce we have that, we'll be able to take a proper look and follow up  with next steps.  \nLooking forward to hearing more, \nTeSidrah team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        -32
+      ],
+      "id": "58c99bae-0213-4538-a60e-8e0ee446d555",
+      "name": "Email: Client — Invalid (Partial Intent)",
+      "webhookId": "c56fb90a-9018-4b6a-8f9c-9b62917b56bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Jmf2HXhomkCQ3wBk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1FNX78BqIG-tYlDs2OIkCKQjAZjXB6TlzZdGt64kpndQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "page-1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FNX78BqIG-tYlDs2OIkCKQjAZjXB6TlzZdGt64kpndQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.Name }}",
+            "Email": "={{ $json.Email }}",
+            "description": "={{ $json.description }}",
+            "category": "={{ $json.category }}",
+            "reasoning": "={{ $json.reasoning }}",
+            "has_partial_intent": "={{ $json.output.has_partial_intent }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "has_partial_intent",
+              "displayName": "has_partial_intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -320,
+        -640
+      ],
+      "id": "a203c47c-873d-40b4-b125-97b6dcf629d7",
+      "name": "Sheets: Log Submission",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dz5WRVVTNBMfPelT",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Intake Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Project Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Description": {
+      "main": [
+        [
+          {
+            "node": "Attach Classification to Submission",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle: Classification Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classification Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Project Description",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Category + Reasoning Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Project Description",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle: Classification Failure": {
+      "main": [
+        [
+          {
+            "node": "Route: By Classification Category",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets: Log Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Classification to Submission": {
+      "main": [
+        [
+          {
+            "node": "Route: By Classification Category",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets: Log Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: By Classification Category": {
+      "main": [
+        [
+          {
+            "node": "Email: Internal — Simple Automation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Internal — AI Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Internal — Custom Integration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Internal — Ambiguous/System Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Internal — Ambiguous/System Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check: Has Partial Intent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Internal — Simple Automation": {
+      "main": [
+        [
+          {
+            "node": "Email: Client — Simple Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Client — Simple Automation": {
+      "main": [
+        []
+      ]
+    },
+    "Email: Internal — Ambiguous/System Error": {
+      "main": [
+        [
+          {
+            "node": "Merge: Rebuild After Notification — Ambiguous/System Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge: Rebuild After Notification — Ambiguous/System Error": {
+      "main": [
+        [
+          {
+            "node": "Check: Is System Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Is System Error?": {
+      "main": [
+        [
+          {
+            "node": "Email: Client — System Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Client — Ambiguous",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Internal — AI Workflow": {
+      "main": [
+        [
+          {
+            "node": "Email: Client — AI Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Client — AI Workflow": {
+      "main": [
+        []
+      ]
+    },
+    "Email: Internal — Custom Integration": {
+      "main": [
+        [
+          {
+            "node": "Email: Client — Custom Integration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Client — Custom Integration": {
+      "main": [
+        []
+      ]
+    },
+    "Check: Has Partial Intent?": {
+      "main": [
+        [
+          {
+            "node": "Email: Internal — Invalid (Partial Intent)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Email: Internal — Invalid (Partial Intent)": {
+      "main": [
+        [
+          {
+            "node": "Email: Client — Invalid (Partial Intent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Client — Invalid (Partial Intent)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "209621bc-4a05-440a-a257-f865430d8313",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0cc4fd632c364513c5f8cef8fa49d0ccffadd5fdf3ee4685e8f2a9f57c68c659"
+  },
+  "nodeGroups": [],
+  "id": "YWReK9GqO7fJU9SR",
+  "tags": []
+}
