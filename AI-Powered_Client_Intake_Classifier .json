@@ -3,22 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Classify Client Intake Forms with Google Gemini, Gmail & Sheets\n\nFor agencies and freelancers who take project requests through a form and need those requests sorted by type before anyone reads them — this workflow uses an LLM to classify each submission and routes it automatically, instead of a human triaging every lead by hand.\n\n### How it works\n1. A client submits a form with their name, email, and a project description.\n2. Gemini classifies the description into one of five categories: simple_automation, ai_workflow, custom_integration, ambiguous, or invalid — with a reasoning field, and a has_partial_intent flag for invalid submissions that still show a real but underspecified project.\n3. Every submission logs to Google Sheets immediately, independent of anything downstream — including classification failures, which retry automatically before falling back to a distinct \"system error\" state instead of crashing the run.\n4. Each outcome triggers an internal notification with the category and the model's own reasoning.\n5. Each real category also gets a tailored client confirmation email — written in plain language, setting honest expectations on process and turnaround for that category specifically.\n6. Genuinely invalid submissions send no client email but still log; partial-intent ones get asked for more detail instead of being dropped.\n\n### Setup\n1. Connect three credentials: Gemini API, Gmail OAuth2, and Google Sheets OAuth2.\n2. Point the Google Sheets node at a sheet with columns: Name, Email, description, category, reasoning, has_partial_intent.\n3. Replace the internal notification email address in the Gmail nodes with your own team inbox.\n4. In Google Cloud Console, enable both OAuth consent and the Gmail API itself for the Gmail nodes — they're separate steps and both are required for sending to work.\n\nQuestions? Post in the n8n Community Forum.",
-        "height": 900,
-        "width": 620,
-        "color": 4
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -1680,
-        -1250
-      ],
-      "id": "8b1c1e2a-6e4a-4b3f-9a2d-5f7c9e0d4a11",
-      "name": "Workflow Documentation"
-    },
-    {
-      "parameters": {
         "formTitle": "Intake form",
         "formDescription": "Write your name, email, and what task you need it to be done, and will reach out to you as soon as possible.",
         "formFields": {
@@ -827,8 +811,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        -340,
-        -1200
+        -60,
+        -1220
       ],
       "id": "a203c47c-873d-40b4-b125-97b6dcf629d7",
       "name": "Sheets: Log Submission",
@@ -838,6 +822,96 @@
           "name": "Google Sheets account"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "## Client Intake Classifier\n\nFor agencies and freelancers who take project requests through a form and need those requests sorted by type before anyone reads them. An LLM classifies each submission and routes it automatically, instead of a human triaging every lead by hand.\n\n**Flow at a glance:** Form submission → AI classification → route by category → notify + log.",
+        "height": 260,
+        "width": 620
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        -1250
+      ],
+      "id": "sticky-10822",
+      "name": "Sticky: Overview"
+    },
+    {
+      "parameters": {
+        "content": "### 1. Classify the submission\n\nThe form's project description is sent to Gemini, which sorts it into one of five categories — simple_automation, ai_workflow, custom_integration, ambiguous, or invalid — and flags whether an \"invalid\" submission still shows partial automation intent.\n\nA structured output schema keeps the model's response in a fixed shape so the rest of the workflow can route on it reliably.",
+        "height": 220,
+        "width": 700
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -940,
+        -1300
+      ],
+      "id": "sticky-15895",
+      "name": "Sticky: Classification"
+    },
+    {
+      "parameters": {
+        "content": "### 2. Handle the result, then route\n\nIf classification succeeds, the category is attached to the submission. If it fails (after 3 retries, 5s apart), it's marked as a distinct system_error state instead of crashing the workflow.\n\nEither way, the submission is logged to Google Sheets — this happens independently of whether the notification emails below succeed, so every submission is recorded even if a category or email step fails.\n\nA Switch node then routes the submission into one of five paths based on its category.",
+        "height": 180,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        -1520
+      ],
+      "id": "sticky-23961",
+      "name": "Sticky: Routing & Logging"
+    },
+    {
+      "parameters": {
+        "content": "### 3. Standard categories\n\nsimple_automation, ai_workflow, and custom_integration all follow the same two-step pattern: an internal email alerts the team to the new lead, then a confirmation email goes to the client.",
+        "height": 650,
+        "width": 240
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -780
+      ],
+      "id": "sticky-42921",
+      "name": "Sticky: Standard Notification Pattern"
+    },
+    {
+      "parameters": {
+        "content": "### 4. Ambiguous & system error — shared path\n\nBoth land here first, sharing one internal-alert email. After the notification, a check splits them apart: system errors get a \"we're looking into it\" client email; ambiguous submissions get a \"we need more detail\" client email.",
+        "height": 75,
+        "width": 1140
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        215
+      ],
+      "id": "sticky-55976",
+      "name": "Sticky: Ambiguous & System Error Handling"
+    },
+    {
+      "parameters": {
+        "content": "### 5. Invalid submissions\n\nChecked for partial automation intent. If some intent is present, the team is notified and the client gets a follow-up email. If there's none, the submission is logged (above) and the flow ends here — no notification is sent.",
+        "height": 180,
+        "width": 240
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        280
+      ],
+      "id": "sticky-1583",
+      "name": "Sticky: Invalid Submissions"
     }
   ],
   "pinData": {},
