@@ -1,6 +1,6 @@
-# AI-Powered Client Intake Classifier
+# Client Intake Classifier
 
-An n8n workflow that reads a client's project description on submission, classifies it with an LLM, and routes it — tailored confirmation email, internal notification, and a logged row in Google Sheets, all varying by category.
+An n8n workflow that reads a client's project description on submission, classifies it with an LLM, and routes it: tailored confirmation email, internal notification, and a logged row in Google Sheets, all varying by category.
 
 This was built as a personal project to learn AI-integrated automation properly, not for a specific client. The scenario (an automation agency's intake form) is realistic on purpose, and the workflow is built to a standard I'd be comfortable handing to a real client if the opportunity came up.
 
@@ -8,24 +8,24 @@ This was built as a personal project to learn AI-integrated automation properly,
 
 A submission comes in through a form (name, email, project description). Gemini classifies the description into one of five categories, with a short reasoning field attached to every classification:
 
-- **simple_automation** — a trigger with one clear action, no branching or AI judgment needed
-- **ai_workflow** — the value is in AI reasoning itself (summarization, sentiment, drafting, judgment calls)
-- **custom_integration** — real conditional logic and/or multi-system orchestration, driven by fixed rules rather than AI reasoning
-- **ambiguous** — a real project, but genuinely unclear between categories (human review needed)
-- **invalid** — not a workable project description (gibberish, out of scope, or missing critical information)
+- **simple_automation**: a trigger with one clear action, no branching or AI judgment needed
+- **ai_workflow**: the value is in AI reasoning itself (summarization, sentiment, drafting, judgment calls)
+- **custom_integration**: real conditional logic and/or multi-system orchestration, driven by fixed rules rather than AI reasoning
+- **ambiguous**: a real project, but genuinely unclear between categories (human review needed)
+- **invalid**: not a workable project description (gibberish, out of scope, or missing critical information)
 
-`invalid` carries a second field, `has_partial_intent`, distinguishing a vague-but-real attempt from something that isn't a lead at all — each gets a different client email.
+`invalid` carries a second field, `has_partial_intent`, distinguishing a vague-but-real attempt from something that isn't a lead at all. Each gets a different client email.
 
-If classification itself fails (network issue, rate limit, bad response), the workflow retries three times before falling back to a `system_error` path — distinguishable in the data from `ambiguous`, and routed to the same human-review flow without ever crashing the run.
+If classification itself fails (network issue, rate limit, bad response), the workflow retries three times before falling back to a `system_error` path, distinguishable in the data from `ambiguous` and routed to the same human-review flow without ever crashing the run.
 
-Every outcome — including a failed or invalid one — gets logged to Google Sheets. Logging doesn't depend on any email succeeding.
+Every outcome, including a failed or invalid one, gets logged to Google Sheets. Logging doesn't depend on any email succeeding.
 
 ## How it's built
 
 - **Trigger:** n8n Form Trigger (name, email, description)
-- **Classification:** Basic LLM Chain → Gemini Chat Model → Structured Output Parser, enforcing a fixed JSON schema (`reasoning`, `category`, `has_partial_intent`)
+- **Classification:** Basic LLM Chain, Gemini Chat Model, Structured Output Parser, enforcing a fixed JSON schema (`reasoning`, `category`, `has_partial_intent`)
 - **Routing:** a Switch node with six rules (one per category, plus `system_error` converging on the same path as `ambiguous`)
-- **Outputs:** category-specific Gmail nodes (client + internal) and one shared Google Sheets logging node all branches converge on
+- **Outputs:** category-specific Gmail nodes (client and internal) and one shared Google Sheets logging node all branches converge on
 
 Full reasoning behind the design decisions, the bugs hit along the way, and what changed and why: [PROCESS.md](./PROCESS.md)
 

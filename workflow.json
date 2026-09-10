@@ -346,7 +346,7 @@
     },
     {
       "parameters": {
-        "sendTo": "t43885677@gmail.com",
+        "sendTo": "your-email@example.com",
         "subject": "📥 New Lead — Simple Automation",
         "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: simple_automation  \nDescription: {{ $json.description }}",
         "options": {}
@@ -393,7 +393,7 @@
     },
     {
       "parameters": {
-        "sendTo": "=t43885677@gmail.com",
+        "sendTo": "=your-email@example.com",
         "subject": "={{ $json.category === \"system_error\" ? \"[Action Needed] Classification Error\" : \"[Action Needed] Ambiguous Intake\" }} — {{ $json.Name }}",
         "emailType": "text",
         "message": "=A new client submission needs manual attention.  Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nFlagged as: {{ $json.category }} \nReason: {{ $json.reasoning }}  \nOriginal message: \"{{ $json.description }}\" \n{{ $json.category === \"system_error\" ? \"This one failed automatic classification after multiple retries.\" : \"This one didn't clearly fit a single category and needs a human call.\"\n}}  \nPlease review and route manually.",
@@ -546,7 +546,7 @@
     },
     {
       "parameters": {
-        "sendTo": "=t43885677@gmail.com",
+        "sendTo": "=your-email@example.com",
         "subject": "📥 New Lead — AI Workflow",
         "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: ai_workflow  \nDescription: {{ $json.description }}",
         "options": {}
@@ -593,7 +593,7 @@
     },
     {
       "parameters": {
-        "sendTo": "t43885677@gmail.com",
+        "sendTo": "your-email@example.com",
         "subject": "📥 New Lead — Custom Integration",
         "emailType": "text",
         "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: custom_integration  \nDescription: {{ $json.description }}",
@@ -675,7 +675,7 @@
     },
     {
       "parameters": {
-        "sendTo": "t43885677@gmail.com",
+        "sendTo": "your-email@example.com",
         "subject": "📝 Partial Lead — Awaiting More Detail",
         "emailType": "text",
         "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: invalid (partial intent — missing detail) \nReason: {{ $json.reasoning }}  \nSubmission: {{ $json.description }}  \nThis looks like a real project but is missing key details. \nWe've asked  the client for more info — keep an eye out for their reply and follow  up once it comes in.",
@@ -726,7 +726,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "https://docs.google.com/spreadsheets/d/1FNX78BqIG-tYlDs2OIkCKQjAZjXB6TlzZdGt64kpndQ/edit?gid=0#gid=0",
+          "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit?gid=0#gid=0",
           "mode": "url"
         },
         "sheetName": {
@@ -734,7 +734,7 @@
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "page-1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FNX78BqIG-tYlDs2OIkCKQjAZjXB6TlzZdGt64kpndQ/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -825,8 +825,8 @@
     },
     {
       "parameters": {
-        "content": "## Client Intake Classifier\n\nFor agencies and freelancers who take project requests through a form and need those requests sorted by type before anyone reads them. An LLM classifies each submission and routes it automatically, instead of a human triaging every lead by hand.\n\n**Flow at a glance:** Form submission → AI classification → route by category → notify + log.",
-        "height": 260,
+        "content": "## Client Intake Classifier\n\nFor agencies and freelancers who take project requests through a form and need those requests sorted by type before anyone reads them. An LLM classifies each submission and routes it automatically, instead of a human triaging every lead by hand.\n\n**Flow at a glance:** Form submission → AI classification → route by category → notify + log.\n\n**Setup:** Requires a Google Gemini (PaLM) API credential, a Gmail OAuth2 credential (used for all internal + client notification emails), and a Google Sheets OAuth2 credential (used for logging). Update the target spreadsheet ID and sender addresses to your own before running.\n\n**Support:** Questions or issues — ask in the [n8n Community Forum](https://community.n8n.io).",
+        "height": 380,
         "width": 620
       },
       "type": "n8n-nodes-base.stickyNote",
