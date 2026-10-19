@@ -319,7 +319,7 @@
                   {
                     "id": "81c0ea15-7053-4ecb-ae27-16fe4a962489",
                     "leftValue": "={{ $json.category }}",
-                    "rightValue": "=invalid",
+                    "rightValue": "invalid",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
@@ -393,7 +393,7 @@
     },
     {
       "parameters": {
-        "sendTo": "=your-email@example.com",
+        "sendTo": "your-email@example.com",
         "subject": "={{ $json.category === \"system_error\" ? \"[Action Needed] Classification Error\" : \"[Action Needed] Ambiguous Intake\" }} — {{ $json.Name }}",
         "emailType": "text",
         "message": "=A new client submission needs manual attention.  Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nFlagged as: {{ $json.category }} \nReason: {{ $json.reasoning }}  \nOriginal message: \"{{ $json.description }}\" \n{{ $json.category === \"system_error\" ? \"This one failed automatic classification after multiple retries.\" : \"This one didn't clearly fit a single category and needs a human call.\"\n}}  \nPlease review and route manually.",
@@ -475,7 +475,7 @@
             {
               "id": "7e55cd64-83d5-4ca3-a0ff-4b5b266738ba",
               "leftValue": "={{ $json.category }}",
-              "rightValue": "=system_error",
+              "rightValue": "system_error",
               "operator": {
                 "type": "string",
                 "operation": "equals"
@@ -546,7 +546,7 @@
     },
     {
       "parameters": {
-        "sendTo": "=your-email@example.com",
+        "sendTo": "your-email@example.com",
         "subject": "📥 New Lead — AI Workflow",
         "message": "=Client: {{ $json.Name }} \nEmail: {{ $json.Email }} \nCategory: ai_workflow  \nDescription: {{ $json.description }}",
         "options": {}
@@ -1081,6 +1081,16 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Email: Client — System Error": {
+      "main": [
+        []
+      ]
+    },
+    "Email: Client — Ambiguous": {
+      "main": [
+        []
       ]
     },
     "Email: Internal — AI Workflow": {
